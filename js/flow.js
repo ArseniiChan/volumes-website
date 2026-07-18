@@ -74,6 +74,7 @@
     document.getElementById('mailGuard').hidden = true;
     document.getElementById('invMailGuard').hidden = true;
     document.getElementById('loginNote').textContent = '';
+    document.getElementById('detailsText').value = '';
     syncCount();
     syncCatBadges();
   }
@@ -216,12 +217,15 @@
     var list = Array.from(selected);
     var subject = role + ' inquiry — ' + list.slice(0, 3).join(', ') +
       (list.length > 3 ? ' +' + (list.length - 3) + ' more' : '');
-    var mail = buildEmail(subject, [
+    var details = document.getElementById('detailsText').value.trim();
+    var body = [
       'Hello Volumes,',
       '',
       'I am a ' + role.toLowerCase() + ' interested in the following data:',
       ''
-    ].concat(list.map(function (x) { return '• ' + x; }), ['', '']));
+    ].concat(list.map(function (x) { return '• ' + x; }));
+    if (details) body = body.concat(['', 'Details: ' + details]);
+    var mail = buildEmail(subject, body.concat(['', '']));
 
     document.getElementById('mailText').value = mail.text;
     document.getElementById('mailGuard').hidden = false;

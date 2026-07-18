@@ -246,6 +246,31 @@ dialog::backdrop {
 .notsure { margin-bottom: 1.1rem; }
 .chip-notsure { min-height: 44px; padding: .6rem 1.2rem; }
 
+.details-field { margin-top: 1.3rem; }
+.details-label {
+  display: block;
+  font-size: .62rem; letter-spacing: .26em;
+  color: var(--silver);
+  text-transform: uppercase;
+  margin-bottom: .55rem;
+}
+.details-label span {
+  color: var(--dim);
+  letter-spacing: .1em;
+  text-transform: none;
+}
+.details-field textarea {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: inherit; font-size: .82rem; line-height: 1.6; letter-spacing: .04em;
+  padding: .8rem 1rem;
+  resize: vertical;
+}
+.details-field textarea::placeholder { color: var(--dim); }
+.details-field textarea:focus { outline: none; border-color: var(--teal); }
+
 .compose {
   margin-top: 1.6rem; width: 100%;
   border: 1px solid var(--teal);
