@@ -220,6 +220,7 @@ export function start(container, opts) {
   /* ---------- loop ---------- */
   var t = 0;
   var running = true;
+  var stage = document.querySelector('.stage');
   var introStart = performance.now(); /* one slow settle-in, then stillness */
   var introPlayed = false; /* if the tab loads hidden, replay the settle on first view */
   var stats = { frames: 0, since: performance.now() };
@@ -244,6 +245,13 @@ export function start(container, opts) {
     camera.position.z = (1 - settle) * 150;
     /* counter-shifted look target roughly doubles the perceived parallax */
     camera.lookAt(-camera.position.x * 0.55, -35 - (camera.position.y - 30) * 0.55, -700);
+
+    /* the interface floats against the room: the fixed center layer is what
+       the eye anchors on, so it must drift opposite the camera to read as depth */
+    if (stage) {
+      stage.style.transform = 'translate3d(' + (-camera.position.x * 0.14).toFixed(1) + 'px,' +
+        ((camera.position.y - 30) * 0.14).toFixed(1) + 'px,0)';
+    }
 
     if (dbg) {
       dbg.textContent = 'perm:   ' + permState +
