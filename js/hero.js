@@ -144,6 +144,14 @@ export function start(container, opts) {
   /* parallax: the camera drifts through the room — gyro on phones,
      cursor position on desktop. Slow and small, per the motion rules. */
   var parTX = 0, parTY = 30;
+  var tiltEvents = 0, permState = 'no-permission-api', lastTilt = '—';
+  var dbg = null;
+  if (!opts.poster && new URLSearchParams(location.search).has('debug')) {
+    dbg = document.createElement('div');
+    dbg.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;color:#3ec6c6;' +
+      'font:11px/1.5 monospace;background:rgba(0,0,0,.7);padding:8px;pointer-events:none;white-space:pre;';
+    document.body.appendChild(dbg);
+  }
 
   function onMove(e) {
     var ndcX = (e.clientX / container.clientWidth) * 2 - 1;
@@ -158,6 +166,8 @@ export function start(container, opts) {
   var baseBeta = null, baseGamma = null;
   function onTilt(e) {
     if (e.beta === null || e.gamma === null) return;
+    tiltEvents++;
+    lastTilt = e.beta.toFixed(1) + '/' + e.gamma.toFixed(1);
     var beta = e.beta, gamma = e.gamma;
     var angle = (screen.orientation && screen.orientation.angle) || 0;
     if (angle === 90) { var tmp = beta; beta = -gamma; gamma = tmp; }
@@ -183,23 +193,26 @@ export function start(container, opts) {
         typeof DeviceOrientationEvent.requestPermission === 'function') {
       /* iOS: motion access needs a user gesture. Ask from several gesture
          types — Safari is picky about which ones carry user activation. */
+      permState = 'waiting for first tap';
       var asked = false;
       var askOnce = function () {
         if (asked) return;
         DeviceOrientationEvent.requestPermission()
           .then(function (state) {
             asked = true;
+            permState = state;
             ['pointerdown', 'touchend', 'click'].forEach(function (ev) {
               window.removeEventListener(ev, askOnce);
             });
             if (state === 'granted') bindTilt();
           })
-          .catch(function () { /* not a user gesture yet: keep listening */ });
+          .catch(function (err) { permState = 'ask failed: ' + err; });
       };
       ['pointerdown', 'touchend', 'click'].forEach(function (ev) {
         window.addEventListener(ev, askOnce);
       });
     } else if ('DeviceOrientationEvent' in window) {
+      permState = 'bound without prompt';
       bindTilt();
     }
   }
@@ -229,7 +242,16 @@ export function start(container, opts) {
     camera.position.x += (parTX - camera.position.x) * 0.075;
     camera.position.y += (parTY + (1 - settle) * 34 - camera.position.y) * 0.075;
     camera.position.z = (1 - settle) * 150;
-    camera.lookAt(0, -35, -700);
+    /* counter-shifted look target roughly doubles the perceived parallax */
+    camera.lookAt(-camera.position.x * 0.55, -35 - (camera.position.y - 30) * 0.55, -700);
+
+    if (dbg) {
+      dbg.textContent = 'perm:   ' + permState +
+        '\nevents: ' + tiltEvents +
+        '\ntilt:   ' + lastTilt +
+        '\ntarget: ' + parTX.toFixed(0) + '/' + parTY.toFixed(0) +
+        '\ncam:    ' + camera.position.x.toFixed(0) + '/' + camera.position.y.toFixed(0);
+    }
 
     renderer.render(scene, camera);
     stats.frames++;
