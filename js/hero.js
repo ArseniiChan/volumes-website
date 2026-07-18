@@ -141,6 +141,10 @@ export function start(container, opts) {
   var lastMove = -1e4;
   var rayDir = new THREE.Vector3();
 
+  /* parallax: the camera drifts through the room — gyro on phones,
+     cursor position on desktop. Slow and small, per the motion rules. */
+  var parTX = 0, parTY = 30;
+
   function onMove(e) {
     var ndcX = (e.clientX / container.clientWidth) * 2 - 1;
     var ndcY = -(e.clientY / container.clientHeight) * 2 + 1;
@@ -148,12 +152,46 @@ export function start(container, opts) {
     var t = (-700 - camera.position.z) / rayDir.z;
     pointerTarget.copy(camera.position).addScaledVector(rayDir, t);
     lastMove = performance.now();
+    if (!touchy) { parTX = ndcX * 26; parTY = 30 + ndcY * 16; }
   }
+
+  var baseBeta = null, baseGamma = null;
+  function onTilt(e) {
+    if (e.beta === null || e.gamma === null) return;
+    var beta = e.beta, gamma = e.gamma;
+    var angle = (screen.orientation && screen.orientation.angle) || 0;
+    if (angle === 90) { var tmp = beta; beta = -gamma; gamma = tmp; }
+    else if (angle === -90 || angle === 270) { var tmp2 = beta; beta = gamma; gamma = -tmp2; }
+    if (baseBeta === null) { baseBeta = beta; baseGamma = gamma; }
+    /* slowly re-center the neutral pose so holding a new angle becomes home */
+    baseBeta += (beta - baseBeta) * 0.005;
+    baseGamma += (gamma - baseGamma) * 0.005;
+    var dg = Math.max(-20, Math.min(20, gamma - baseGamma));
+    var db = Math.max(-20, Math.min(20, beta - baseBeta));
+    parTX = (dg / 20) * 55;
+    parTY = 30 - (db / 20) * 38;
+  }
+  function bindTilt() { window.addEventListener('deviceorientation', onTilt, { passive: true }); }
+
   if (!opts.poster) {
     window.addEventListener('pointermove', onMove, { passive: true });
     window.addEventListener('pointerdown', onMove, { passive: true });
     window.addEventListener('pointerleave', function () { lastMove = -1e4; });
     window.addEventListener('pointerup', function () { lastMove = -1e4; });
+
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      /* iOS: motion access needs a user gesture; ask on the first touch */
+      var askOnce = function () {
+        window.removeEventListener('pointerdown', askOnce);
+        DeviceOrientationEvent.requestPermission()
+          .then(function (state) { if (state === 'granted') bindTilt(); })
+          .catch(function () { /* denied: touch deformation still works */ });
+      };
+      window.addEventListener('pointerdown', askOnce);
+    } else if ('DeviceOrientationEvent' in window) {
+      bindTilt();
+    }
   }
 
   /* ---------- loop ---------- */
@@ -172,6 +210,10 @@ export function start(container, opts) {
     strengthTarget = (performance.now() - lastMove < 120) ? 1 : 0;
     uniforms.uStrength.value += (strengthTarget - uniforms.uStrength.value) * 0.1;
     uniforms.uPointer.value.lerp(pointerTarget, 0.18);
+
+    camera.position.x += (parTX - camera.position.x) * 0.045;
+    camera.position.y += (parTY - camera.position.y) * 0.045;
+    camera.lookAt(0, -35, -700);
 
     renderer.render(scene, camera);
     stats.frames++;
