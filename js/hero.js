@@ -163,13 +163,13 @@ export function start(container, opts) {
     if (angle === 90) { var tmp = beta; beta = -gamma; gamma = tmp; }
     else if (angle === -90 || angle === 270) { var tmp2 = beta; beta = gamma; gamma = -tmp2; }
     if (baseBeta === null) { baseBeta = beta; baseGamma = gamma; }
-    /* slowly re-center the neutral pose so holding a new angle becomes home */
-    baseBeta += (beta - baseBeta) * 0.005;
-    baseGamma += (gamma - baseGamma) * 0.005;
-    var dg = Math.max(-20, Math.min(20, gamma - baseGamma));
-    var db = Math.max(-20, Math.min(20, beta - baseBeta));
-    parTX = (dg / 20) * 55;
-    parTY = 30 - (db / 20) * 38;
+    /* re-center the neutral pose very slowly (~30s) so a held lean stays leaned */
+    baseBeta += (beta - baseBeta) * 0.0006;
+    baseGamma += (gamma - baseGamma) * 0.0006;
+    var dg = Math.max(-25, Math.min(25, gamma - baseGamma));
+    var db = Math.max(-25, Math.min(25, beta - baseBeta));
+    parTX = (dg / 25) * 95;
+    parTY = 30 - (db / 25) * 60;
   }
   function bindTilt() { window.addEventListener('deviceorientation', onTilt, { passive: true }); }
 
@@ -181,14 +181,24 @@ export function start(container, opts) {
 
     if (typeof DeviceOrientationEvent !== 'undefined' &&
         typeof DeviceOrientationEvent.requestPermission === 'function') {
-      /* iOS: motion access needs a user gesture; ask on the first touch */
+      /* iOS: motion access needs a user gesture. Ask from several gesture
+         types — Safari is picky about which ones carry user activation. */
+      var asked = false;
       var askOnce = function () {
-        window.removeEventListener('pointerdown', askOnce);
+        if (asked) return;
         DeviceOrientationEvent.requestPermission()
-          .then(function (state) { if (state === 'granted') bindTilt(); })
-          .catch(function () { /* denied: touch deformation still works */ });
+          .then(function (state) {
+            asked = true;
+            ['pointerdown', 'touchend', 'click'].forEach(function (ev) {
+              window.removeEventListener(ev, askOnce);
+            });
+            if (state === 'granted') bindTilt();
+          })
+          .catch(function () { /* not a user gesture yet: keep listening */ });
       };
-      window.addEventListener('pointerdown', askOnce);
+      ['pointerdown', 'touchend', 'click'].forEach(function (ev) {
+        window.addEventListener(ev, askOnce);
+      });
     } else if ('DeviceOrientationEvent' in window) {
       bindTilt();
     }
@@ -216,8 +226,8 @@ export function start(container, opts) {
     var introK = Math.min(1, (performance.now() - introStart) / 3000);
     if (introK < 1) introPlayed = true;
     var settle = 1 - Math.pow(1 - introK, 3);
-    camera.position.x += (parTX - camera.position.x) * 0.045;
-    camera.position.y += (parTY + (1 - settle) * 34 - camera.position.y) * 0.045;
+    camera.position.x += (parTX - camera.position.x) * 0.075;
+    camera.position.y += (parTY + (1 - settle) * 34 - camera.position.y) * 0.075;
     camera.position.z = (1 - settle) * 150;
     camera.lookAt(0, -35, -700);
 
