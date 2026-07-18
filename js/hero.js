@@ -197,6 +197,8 @@ export function start(container, opts) {
   /* ---------- loop ---------- */
   var t = 0;
   var running = true;
+  var introStart = performance.now(); /* one slow settle-in, then stillness */
+  var introPlayed = false; /* if the tab loads hidden, replay the settle on first view */
   var stats = { frames: 0, since: performance.now() };
   window.__heroStats = stats;
   window.__hero = { renderer: renderer, scene: scene, camera: camera, uniforms: uniforms, group: group };
@@ -211,8 +213,12 @@ export function start(container, opts) {
     uniforms.uStrength.value += (strengthTarget - uniforms.uStrength.value) * 0.1;
     uniforms.uPointer.value.lerp(pointerTarget, 0.18);
 
+    var introK = Math.min(1, (performance.now() - introStart) / 3000);
+    if (introK < 1) introPlayed = true;
+    var settle = 1 - Math.pow(1 - introK, 3);
     camera.position.x += (parTX - camera.position.x) * 0.045;
-    camera.position.y += (parTY - camera.position.y) * 0.045;
+    camera.position.y += (parTY + (1 - settle) * 34 - camera.position.y) * 0.045;
+    camera.position.z = (1 - settle) * 150;
     camera.lookAt(0, -35, -700);
 
     renderer.render(scene, camera);
@@ -239,7 +245,11 @@ export function start(container, opts) {
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) { running = false; }
-    else if (!running) { running = true; requestAnimationFrame(frame); }
+    else if (!running) {
+      if (!introPlayed) introStart = performance.now();
+      running = true;
+      requestAnimationFrame(frame);
+    }
   });
 
   requestAnimationFrame(frame);
