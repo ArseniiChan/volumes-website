@@ -34,16 +34,46 @@ export function start(container, opts) {
   /* Coordinates mirror the approved comp: x right, y up, depth away from
      camera. The cloud group sits at Z=-700 and sways around its own axis. */
   var D = 2; /* density factor → ~13k points */
-  var pos = [], col = [], size = [], amp = [], seed = [];
+  var pos = [], col = [], size = [], amp = [], seed = [], armLever = [];
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
-  function pt(x, yDown, zMock, r, g, b, s, driftAmp, vMin, vMax) {
+  function pt(x, yDown, zMock, r, g, b, s, driftAmp, vMin, vMax, lever) {
     pos.push(x, -yDown, -zMock);
     var v = rnd(vMin === undefined ? 0.55 : vMin, vMax === undefined ? 1.0 : vMax);
     col.push(r / 255 * v, g / 255 * v, b / 255 * v);
     size.push(s);
     amp.push(driftAmp || 0);
     seed.push(Math.random());
+    armLever.push(lever || 0);
+  }
+
+  /* dense scatter primitives for the manipulator: points hug the surface
+     of a tube so the silhouette stays crisp at sparse density */
+  function capsule(a, b, r, n, c, vMin, vMax, levA, levB) {
+    var dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
+    var len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+    var ux = dx / len, uy = dy / len, uz = dz / len;
+    for (var k = 0; k < n; k++) {
+      var f = Math.random();
+      /* random vector minus its axial component → perpendicular offset */
+      var ox = rnd(-1, 1), oy = rnd(-1, 1), oz = rnd(-1, 1);
+      var dot = ox * ux + oy * uy + oz * uz;
+      ox -= dot * ux; oy -= dot * uy; oz -= dot * uz;
+      var m = Math.sqrt(ox * ox + oy * oy + oz * oz) || 1;
+      var rr = r * (0.65 + 0.35 * Math.random());
+      pt(a[0] + dx * f + ox / m * rr, a[1] + dy * f + oy / m * rr, a[2] + dz * f + oz / m * rr,
+         c[0], c[1], c[2], rnd(.7, 1.2), 0, vMin, vMax,
+         levA === undefined ? 0 : levA + (levB - levA) * f);
+    }
+  }
+  function blob(cen, r, n, c, vMin, vMax, lev) {
+    for (var k = 0; k < n; k++) {
+      var ox = rnd(-1, 1), oy = rnd(-1, 1), oz = rnd(-1, 1);
+      var m = Math.sqrt(ox * ox + oy * oy + oz * oz) || 1;
+      var rr = r * (0.7 + 0.3 * Math.random());
+      pt(cen[0] + ox / m * rr, cen[1] + oy / m * rr, cen[2] + oz / m * rr,
+         c[0], c[1], c[2], rnd(.75, 1.25), 0, vMin, vMax, lev || 0);
+    }
   }
 
   var i, rx, ry, side;
@@ -71,6 +101,30 @@ export function start(container, opts) {
   for (i = 0; i < 420 * D; i++) pt(rnd(-260, 260), rnd(-330, -290) + rnd(-8, 8), rnd(-100, 400), 240, 244, 250, rnd(.7, 1.7), 0, .8, 1.2);
   /* teal instrument accents */
   for (i = 0; i < 120 * D; i++) pt(rnd(-700, 700), rnd(-260, 240), rnd(-400, 800), 62, 198, 198, rnd(.4, 1.0));
+
+  /* ---- the manipulator: one robot arm at a workbench, the room's actor ----
+     Densest, brightest object in the scene so it reads first. The forearm
+     assembly carries a lever weight (aArm) driving a ~20s breathing arc. */
+  var STEEL = [190, 196, 208], JOINT = [228, 232, 242], BENCH = [152, 147, 138], TEAL = [62, 198, 198], WARM = [205, 122, 58];
+  /* workbench: top slab + legs */
+  for (i = 0; i < 620; i++) pt(rnd(240, 460), 100 + rnd(0, 12), rnd(220, 300), BENCH[0], BENCH[1], BENCH[2], rnd(.6, 1.0), 0, .6, .95);
+  [[248, 228], [452, 228], [248, 292], [452, 292]].forEach(function (leg) {
+    capsule([leg[0], 112, leg[1]], [leg[0], 178, leg[1]], 5, 60, BENCH, .55, .85);
+  });
+  /* base plate + shoulder */
+  capsule([350, 100, 260], [350, 86, 260], 24, 150, STEEL, .7, 1.0);
+  blob([350, 72, 260], 16, 160, JOINT, .85, 1.2);
+  /* upper link → elbow: high apex */
+  capsule([350, 72, 260], [287, -38, 240], 10, 420, STEEL, .75, 1.1);
+  blob([287, -38, 240], 13, 150, JOINT, .85, 1.2);
+  /* forearm → wrist (breathing assembly): wide reach left */
+  capsule([287, -38, 240], [205, 42, 220], 8, 400, STEEL, .75, 1.1, 0, .6);
+  blob([205, 42, 220], 10, 120, TEAL, .9, 1.15, .65);
+  /* gripper prongs */
+  capsule([205, 52, 220], [193, 88, 214], 4.5, 90, STEEL, .8, 1.15, .8, 1);
+  capsule([205, 52, 220], [219, 88, 226], 4.5, 90, STEEL, .8, 1.15, .8, 1);
+  /* the workpiece on the bench, under the gripper */
+  for (i = 0; i < 80; i++) pt(rnd(187, 227), rnd(92, 104), rnd(212, 232), WARM[0], WARM[1], WARM[2], rnd(.6, 1.0), 0, .7, 1.0);
   /* drifting dust — atmosphere, must stay quieter than structure */
   for (i = 0; i < 950 * D; i++) pt(rnd(-900, 900), rnd(-320, 250), rnd(-500, 900), 200, 205, 215, rnd(.3, .7), rnd(2, 5), .3, .6);
 
@@ -80,6 +134,7 @@ export function start(container, opts) {
   geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
   geo.setAttribute('aAmp', new THREE.Float32BufferAttribute(amp, 1));
   geo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
+  geo.setAttribute('aArm', new THREE.Float32BufferAttribute(armLever, 1));
 
   var touchy = !opts.poster && window.matchMedia && matchMedia('(pointer: coarse)').matches;
   var uniforms = {
@@ -100,6 +155,7 @@ export function start(container, opts) {
       'attribute float aSize;',
       'attribute float aAmp;',
       'attribute float aSeed;',
+      'attribute float aArm;',
       'uniform float uTime;',
       'uniform float uDPR;',
       'uniform vec3 uPointer;',
@@ -113,6 +169,9 @@ export function start(container, opts) {
       /* dust drift, structure stays still */
       '  wp.y += sin(uTime * 0.4 + aSeed * 6.2831) * aAmp;',
       '  wp.x += cos(uTime * 0.27 + aSeed * 4.7) * aAmp * 0.6;',
+      /* the arm breathes: forearm assembly rises through a slow shallow arc */
+      '  wp.y += sin(uTime * 0.25) * aArm * 6.0;',
+      '  wp.x -= (1.0 - cos(uTime * 0.25)) * aArm * 1.5;',
       /* local deformation under the pointer, springs back via uStrength */
       '  vec3 d = wp.xyz - uPointer;',
       '  float dist = length(d);',
