@@ -34,46 +34,16 @@ export function start(container, opts) {
   /* Coordinates mirror the approved comp: x right, y up, depth away from
      camera. The cloud group sits at Z=-700 and sways around its own axis. */
   var D = 2; /* density factor → ~13k points */
-  var pos = [], col = [], size = [], amp = [], seed = [], armLever = [];
+  var pos = [], col = [], size = [], amp = [], seed = [];
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
-  function pt(x, yDown, zMock, r, g, b, s, driftAmp, vMin, vMax, lever) {
+  function pt(x, yDown, zMock, r, g, b, s, driftAmp, vMin, vMax) {
     pos.push(x, -yDown, -zMock);
     var v = rnd(vMin === undefined ? 0.55 : vMin, vMax === undefined ? 1.0 : vMax);
     col.push(r / 255 * v, g / 255 * v, b / 255 * v);
     size.push(s);
     amp.push(driftAmp || 0);
     seed.push(Math.random());
-    armLever.push(lever || 0);
-  }
-
-  /* dense scatter primitives for the manipulator: points hug the surface
-     of a tube so the silhouette stays crisp at sparse density */
-  function capsule(a, b, r, n, c, vMin, vMax, levA, levB) {
-    var dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2];
-    var len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-    var ux = dx / len, uy = dy / len, uz = dz / len;
-    for (var k = 0; k < n; k++) {
-      var f = Math.random();
-      /* random vector minus its axial component → perpendicular offset */
-      var ox = rnd(-1, 1), oy = rnd(-1, 1), oz = rnd(-1, 1);
-      var dot = ox * ux + oy * uy + oz * uz;
-      ox -= dot * ux; oy -= dot * uy; oz -= dot * uz;
-      var m = Math.sqrt(ox * ox + oy * oy + oz * oz) || 1;
-      var rr = r * (0.65 + 0.35 * Math.random());
-      pt(a[0] + dx * f + ox / m * rr, a[1] + dy * f + oy / m * rr, a[2] + dz * f + oz / m * rr,
-         c[0], c[1], c[2], rnd(.7, 1.2), 0, vMin, vMax,
-         levA === undefined ? 0 : levA + (levB - levA) * f);
-    }
-  }
-  function blob(cen, r, n, c, vMin, vMax, lev) {
-    for (var k = 0; k < n; k++) {
-      var ox = rnd(-1, 1), oy = rnd(-1, 1), oz = rnd(-1, 1);
-      var m = Math.sqrt(ox * ox + oy * oy + oz * oz) || 1;
-      var rr = r * (0.7 + 0.3 * Math.random());
-      pt(cen[0] + ox / m * rr, cen[1] + oy / m * rr, cen[2] + oz / m * rr,
-         c[0], c[1], c[2], rnd(.75, 1.25), 0, vMin, vMax, lev || 0);
-    }
   }
 
   var i, rx, ry, side;
@@ -102,29 +72,15 @@ export function start(container, opts) {
   /* teal instrument accents */
   for (i = 0; i < 120 * D; i++) pt(rnd(-700, 700), rnd(-260, 240), rnd(-400, 800), 62, 198, 198, rnd(.4, 1.0));
 
-  /* ---- the manipulator: one robot arm at a workbench, the room's actor ----
-     Densest, brightest object in the scene so it reads first. The forearm
-     assembly carries a lever weight (aArm) driving a ~20s breathing arc. */
-  var STEEL = [190, 196, 208], JOINT = [228, 232, 242], BENCH = [152, 147, 138], TEAL = [62, 198, 198], WARM = [205, 122, 58];
-  /* workbench: top slab + legs */
-  for (i = 0; i < 620; i++) pt(rnd(240, 460), 100 + rnd(0, 12), rnd(220, 300), BENCH[0], BENCH[1], BENCH[2], rnd(.6, 1.0), 0, .6, .95);
-  [[248, 228], [452, 228], [248, 292], [452, 292]].forEach(function (leg) {
-    capsule([leg[0], 112, leg[1]], [leg[0], 178, leg[1]], 5, 60, BENCH, .55, .85);
+  /* ---- workbench for the manipulator (the arm itself is articulated,
+     built as its own point objects after the material exists) ---- */
+  var BENCH = [152, 147, 138], WARM = [205, 122, 58];
+  for (i = 0; i < 850; i++) pt(rnd(130, 430), 100 + rnd(0, 12), rnd(60, 200), BENCH[0], BENCH[1], BENCH[2], rnd(.6, 1.0), 0, .6, .95);
+  [[142, 72], [418, 72], [142, 188], [418, 188]].forEach(function (leg) {
+    for (var k = 0; k < 70; k++) pt(leg[0] + rnd(-5, 5), rnd(112, 178), leg[1] + rnd(-5, 5), BENCH[0], BENCH[1], BENCH[2], rnd(.55, .9), 0, .55, .85);
   });
-  /* base plate + shoulder */
-  capsule([350, 100, 260], [350, 86, 260], 24, 150, STEEL, .7, 1.0);
-  blob([350, 72, 260], 16, 160, JOINT, .85, 1.2);
-  /* upper link → elbow: high apex */
-  capsule([350, 72, 260], [287, -38, 240], 10, 420, STEEL, .75, 1.1);
-  blob([287, -38, 240], 13, 150, JOINT, .85, 1.2);
-  /* forearm → wrist (breathing assembly): wide reach left */
-  capsule([287, -38, 240], [205, 42, 220], 8, 400, STEEL, .75, 1.1, 0, .6);
-  blob([205, 42, 220], 10, 120, TEAL, .9, 1.15, .65);
-  /* gripper prongs */
-  capsule([205, 52, 220], [193, 88, 214], 4.5, 90, STEEL, .8, 1.15, .8, 1);
-  capsule([205, 52, 220], [219, 88, 226], 4.5, 90, STEEL, .8, 1.15, .8, 1);
-  /* the workpiece on the bench, under the gripper */
-  for (i = 0; i < 80; i++) pt(rnd(187, 227), rnd(92, 104), rnd(212, 232), WARM[0], WARM[1], WARM[2], rnd(.6, 1.0), 0, .7, 1.0);
+  /* the workpiece on the bench, in the gripper's work zone */
+  for (i = 0; i < 90; i++) pt(rnd(155, 195), rnd(90, 102), rnd(115, 155), WARM[0], WARM[1], WARM[2], rnd(.6, 1.0), 0, .7, 1.0);
   /* drifting dust — atmosphere, must stay quieter than structure */
   for (i = 0; i < 950 * D; i++) pt(rnd(-900, 900), rnd(-320, 250), rnd(-500, 900), 200, 205, 215, rnd(.3, .7), rnd(2, 5), .3, .6);
 
@@ -134,7 +90,6 @@ export function start(container, opts) {
   geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
   geo.setAttribute('aAmp', new THREE.Float32BufferAttribute(amp, 1));
   geo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
-  geo.setAttribute('aArm', new THREE.Float32BufferAttribute(armLever, 1));
 
   var touchy = !opts.poster && window.matchMedia && matchMedia('(pointer: coarse)').matches;
   var uniforms = {
@@ -155,7 +110,6 @@ export function start(container, opts) {
       'attribute float aSize;',
       'attribute float aAmp;',
       'attribute float aSeed;',
-      'attribute float aArm;',
       'uniform float uTime;',
       'uniform float uDPR;',
       'uniform vec3 uPointer;',
@@ -169,9 +123,6 @@ export function start(container, opts) {
       /* dust drift, structure stays still */
       '  wp.y += sin(uTime * 0.4 + aSeed * 6.2831) * aAmp;',
       '  wp.x += cos(uTime * 0.27 + aSeed * 4.7) * aAmp * 0.6;',
-      /* the arm breathes: forearm assembly rises through a slow shallow arc */
-      '  wp.y += sin(uTime * 0.25) * aArm * 6.0;',
-      '  wp.x -= (1.0 - cos(uTime * 0.25)) * aArm * 1.5;',
       /* local deformation under the pointer, springs back via uStrength */
       '  vec3 d = wp.xyz - uPointer;',
       '  float dist = length(d);',
@@ -193,6 +144,81 @@ export function start(container, opts) {
   group.position.set(0, 0, -700);
   group.add(cloud);
   scene.add(group);
+
+  /* ---- the manipulator: a UR-style cobot as an articulated joint chain.
+     Each link is its own Points object of ring-sampled cylinders (the rings
+     read as a scanned machine), parented into an FK hierarchy so the arm
+     genuinely moves: base yaw sweeps, elbow flexes, gripper stays low. ---- */
+  var STEEL = [190, 196, 208], JOINT2 = [230, 234, 244], TEAL2 = [62, 198, 198];
+
+  function partArrays() { return { pos: [], col: [], size: [], amp: [], seed: [] }; }
+  function partPush(A, x, y, z, c, vMin, vMax, s) {
+    A.pos.push(x, y, z);
+    var v = rnd(vMin, vMax);
+    A.col.push(c[0] / 255 * v, c[1] / 255 * v, c[2] / 255 * v);
+    A.size.push(s || rnd(.8, 1.3));
+    A.amp.push(0);
+    A.seed.push(Math.random());
+  }
+  /* cylinder as stacked rings along a local axis, centered at (ox,oy,oz) */
+  function ringCyl(A, axis, ox, oy, oz, r, len, c, vMin, vMax) {
+    var nRings = Math.max(2, Math.round(len / 5));
+    var perRing = Math.max(10, Math.round(r * 1.6));
+    for (var q = 0; q < nRings; q++) {
+      var a = -len / 2 + len * q / (nRings - 1);
+      for (var k = 0; k < perRing; k++) {
+        var ang = (k / perRing) * 6.2832 + rnd(-.12, .12);
+        var rr = r * rnd(.94, 1.05);
+        var u = Math.cos(ang) * rr, w = Math.sin(ang) * rr;
+        if (axis === 'y') partPush(A, ox + u, oy + a, oz + w, c, vMin, vMax);
+        else if (axis === 'z') partPush(A, ox + u, oy + w, oz + a, c, vMin, vMax);
+        else partPush(A, ox + a, oy + u, oz + w, c, vMin, vMax);
+      }
+    }
+  }
+  function toPoints(A) {
+    var g2 = new THREE.BufferGeometry();
+    g2.setAttribute('position', new THREE.Float32BufferAttribute(A.pos, 3));
+    g2.setAttribute('aColor', new THREE.Float32BufferAttribute(A.col, 3));
+    g2.setAttribute('aSize', new THREE.Float32BufferAttribute(A.size, 1));
+    g2.setAttribute('aAmp', new THREE.Float32BufferAttribute(A.amp, 1));
+    g2.setAttribute('aSeed', new THREE.Float32BufferAttribute(A.seed, 1));
+    return new THREE.Points(g2, mat);
+  }
+
+  /* bench top is at mock yDown 100, z 140 → local (x, -100, -140) */
+  var armRoot = new THREE.Group();
+  armRoot.position.set(310, -100, -140);
+  group.add(armRoot);
+
+  var j1 = new THREE.Group(); armRoot.add(j1);            /* base yaw */
+  var A_base = partArrays();
+  ringCyl(A_base, 'y', 0, 10, 0, 26, 20, STEEL, .7, 1.0); /* pedestal */
+  ringCyl(A_base, 'y', 0, 26, 0, 20, 14, JOINT2, .8, 1.15); /* shoulder drum */
+  j1.add(toPoints(A_base));
+
+  var j2 = new THREE.Group(); j2.position.set(0, 36, 0); j1.add(j2); /* shoulder pitch */
+  var A_upper = partArrays();
+  ringCyl(A_upper, 'z', 0, 0, 0, 18, 44, JOINT2, .8, 1.2);  /* shoulder knuckle */
+  ringCyl(A_upper, 'y', 0, 62, 0, 12.5, 116, STEEL, .75, 1.1); /* upper tube */
+  j2.add(toPoints(A_upper));
+
+  var j3 = new THREE.Group(); j3.position.set(0, 122, 0); j2.add(j3); /* elbow */
+  var A_fore = partArrays();
+  ringCyl(A_fore, 'z', 0, 0, 0, 15, 38, JOINT2, .8, 1.2);   /* elbow knuckle */
+  ringCyl(A_fore, 'y', 0, 54, 0, 9.5, 100, STEEL, .75, 1.1); /* forearm tube */
+  j3.add(toPoints(A_fore));
+
+  var j4 = new THREE.Group(); j4.position.set(0, 106, 0); j3.add(j4); /* wrist */
+  var A_wrist = partArrays();
+  ringCyl(A_wrist, 'z', 0, 4, 0, 9, 24, JOINT2, .8, 1.2);   /* wrist knuckle */
+  ringCyl(A_wrist, 'y', 0, 16, 0, 8, 10, TEAL2, .9, 1.15);  /* teal collar */
+  ringCyl(A_wrist, 'y', 0, 25, 0, 7, 8, STEEL, .8, 1.15);   /* palm */
+  ringCyl(A_wrist, 'y', -7, 38, 0, 2.8, 20, STEEL, .8, 1.2); /* finger */
+  ringCyl(A_wrist, 'y', 7, 38, 0, 2.8, 20, STEEL, .8, 1.2);  /* finger */
+  j4.add(toPoints(A_wrist));
+
+  var arm = { j1: j1, j2: j2, j3: j3, j4: j4 };
 
   /* ---------- pointer → world point on the cloud plane ---------- */
   var pointerTarget = new THREE.Vector3(1e5, 1e5, -700);
@@ -284,7 +310,7 @@ export function start(container, opts) {
   var introPlayed = false; /* if the tab loads hidden, replay the settle on first view */
   var stats = { frames: 0, since: performance.now() };
   window.__heroStats = stats;
-  window.__hero = { renderer: renderer, scene: scene, camera: camera, uniforms: uniforms, group: group };
+  window.__hero = { renderer: renderer, scene: scene, camera: camera, uniforms: uniforms, group: group, arm: arm };
 
   function frame() {
     if (!running) return;
@@ -295,6 +321,12 @@ export function start(container, opts) {
     strengthTarget = (performance.now() - lastMove < 120) ? 1 : 0;
     uniforms.uStrength.value += (strengthTarget - uniforms.uStrength.value) * 0.1;
     uniforms.uPointer.value.lerp(pointerTarget, 0.18);
+
+    /* the arm works: slow base sweep, gentle elbow flex, gripper kept low */
+    arm.j1.rotation.y = 0.25 + Math.sin(t * 2.1) * 0.38;
+    arm.j2.rotation.z = 0.85 + Math.sin(t * 1.5 + 1.2) * 0.05;
+    arm.j3.rotation.z = 1.52 + Math.sin(t * 2.6 + 0.5) * 0.10;
+    arm.j4.rotation.z = 0.72 - Math.sin(t * 2.6 + 0.5) * 0.08;
 
     var introK = Math.min(1, (performance.now() - introStart) / 3000);
     if (introK < 1) introPlayed = true;
@@ -328,6 +360,10 @@ export function start(container, opts) {
   if (opts.poster) {
     /* deterministic single frame for the build-time poster capture */
     group.rotation.y = 0.02;
+    arm.j1.rotation.y = 0.25;
+    arm.j2.rotation.z = 0.85;
+    arm.j3.rotation.z = 1.52;
+    arm.j4.rotation.z = 0.72;
     renderer.render(scene, camera);
     window.__posterReady = true;
     return renderer.domElement;
