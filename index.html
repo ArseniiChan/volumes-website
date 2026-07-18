@@ -167,8 +167,6 @@
   var hero = document.getElementById('hero');
   var q = new URLSearchParams(location.search);
   var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var coarseSmall = matchMedia('(pointer: coarse)').matches &&
-                    Math.min(screen.width, screen.height) < 768;
   var lowPower = (navigator.deviceMemory && navigator.deviceMemory < 4) ||
                  (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ||
                  (navigator.connection && navigator.connection.saveData);
@@ -178,7 +176,7 @@
     webgl = !!(c.getContext('webgl2') || c.getContext('webgl'));
   } catch (e) { webgl = false; }
 
-  var usePoster = q.has('static') || !webgl || reduced || coarseSmall || lowPower;
+  var usePoster = q.has('static') || !webgl || reduced || lowPower;
   if (q.has('hero') || q.has('poster')) usePoster = false;
 
   if (usePoster) {

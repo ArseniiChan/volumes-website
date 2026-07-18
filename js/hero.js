@@ -23,7 +23,9 @@ export function start(container, opts) {
   renderer.setClearColor(0x000000, 1);
   container.appendChild(renderer.domElement);
 
-  var camera = new THREE.PerspectiveCamera(75, W / H, 10, 4000);
+  /* portrait framing: widen the view so the racks stay in frame */
+  function fovFor(aspect) { return aspect < 0.8 ? 92 : 75; }
+  var camera = new THREE.PerspectiveCamera(fovFor(W / H), W / H, 10, 4000);
   camera.position.set(0, 30, 0);
   camera.lookAt(0, -35, -700); /* slight downward pitch: the floor must read */
   var scene = new THREE.Scene();
@@ -79,11 +81,14 @@ export function start(container, opts) {
   geo.setAttribute('aAmp', new THREE.Float32BufferAttribute(amp, 1));
   geo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
 
+  var touchy = !opts.poster && window.matchMedia && matchMedia('(pointer: coarse)').matches;
   var uniforms = {
     uTime: { value: 0 },
     uDPR: { value: opts.poster ? 1 : DPR },
     uPointer: { value: new THREE.Vector3(1e5, 1e5, -700) },
-    uStrength: { value: 0 }
+    uStrength: { value: 0 },
+    uRadius: { value: touchy ? 270 : 175 },
+    uPush: { value: touchy ? 58 : 42 }
   };
 
   var mat = new THREE.ShaderMaterial({
@@ -99,6 +104,8 @@ export function start(container, opts) {
       'uniform float uDPR;',
       'uniform vec3 uPointer;',
       'uniform float uStrength;',
+      'uniform float uRadius;',
+      'uniform float uPush;',
       'varying vec3 vColor;',
       'void main(){',
       '  vColor = aColor;',
@@ -109,8 +116,8 @@ export function start(container, opts) {
       /* local deformation under the pointer, springs back via uStrength */
       '  vec3 d = wp.xyz - uPointer;',
       '  float dist = length(d);',
-      '  float fall = smoothstep(175.0, 0.0, dist);',
-      '  wp.xyz += normalize(d + vec3(0.0001)) * fall * uStrength * 42.0;',
+      '  float fall = smoothstep(uRadius, 0.0, dist);',
+      '  wp.xyz += normalize(d + vec3(0.0001)) * fall * uStrength * uPush;',
       '  vec4 mv = viewMatrix * wp;',
       '  gl_Position = projectionMatrix * mv;',
       '  gl_PointSize = clamp(aSize * 1.9 * uDPR * (520.0 / -mv.z), 0.75, 6.0);',
@@ -144,7 +151,9 @@ export function start(container, opts) {
   }
   if (!opts.poster) {
     window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerdown', onMove, { passive: true });
     window.addEventListener('pointerleave', function () { lastMove = -1e4; });
+    window.addEventListener('pointerup', function () { lastMove = -1e4; });
   }
 
   /* ---------- loop ---------- */
@@ -180,6 +189,7 @@ export function start(container, opts) {
   function onResize() {
     W = container.clientWidth; H = container.clientHeight;
     camera.aspect = W / H;
+    camera.fov = fovFor(camera.aspect);
     camera.updateProjectionMatrix();
     renderer.setSize(W, H);
   }
