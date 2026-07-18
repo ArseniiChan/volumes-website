@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Volumes — Data for Physical AI</title>
+<meta name="description" content="Volumes buys and sells data for physical AI.">
+<meta property="og:title" content="Volumes — Data for Physical AI">
+<meta property="og:description" content="Volumes buys and sells data for physical AI.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://arseniichan.github.io/volumes-website/">
+<meta property="og:image" content="https://arseniichan.github.io/volumes-website/assets/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Volumes — Data for Physical AI">
+<meta name="twitter:description" content="Volumes buys and sells data for physical AI.">
+<meta name="twitter:image" content="https://arseniichan.github.io/volumes-website/assets/og.png">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="preload" href="assets/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/main.css">
+</head>
+<body>
+
+<div class="hero" id="hero" aria-hidden="true"></div>
+<div class="glow" aria-hidden="true"></div>
+
+<main class="stage">
+  <div class="lockup">
+    <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="Volumes logo">
+      <defs>
+        <linearGradient id="ft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fdfdfe"/><stop offset=".45" stop-color="#d9dde3"/><stop offset="1" stop-color="#aab1bb"/></linearGradient>
+        <linearGradient id="fl" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c7ccd4"/><stop offset=".5" stop-color="#8f97a3"/><stop offset="1" stop-color="#5c636e"/></linearGradient>
+        <linearGradient id="fr" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef0f3"/><stop offset=".5" stop-color="#b6bcc6"/><stop offset="1" stop-color="#767e8a"/></linearGradient>
+        <linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#101318"/><stop offset=".7" stop-color="#05070a"/><stop offset="1" stop-color="#000"/></linearGradient>
+        <linearGradient id="be" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E6FF2" stop-opacity="0"/><stop offset=".5" stop-color="#5DA9FF"/><stop offset="1" stop-color="#2E6FF2" stop-opacity="0"/></linearGradient>
+      </defs>
+      <polygon points="22.1,55 22.1,145 100,190" fill="url(#fl)"/>
+      <polygon points="177.9,55 177.9,145 100,190" fill="url(#fr)"/>
+      <polygon points="100,10 22.1,55 177.9,55" fill="url(#ft)"/>
+      <polygon points="22.1,55 177.9,55 100,190" fill="url(#cg)"/>
+      <path d="M 22.1 55 L 100 190 L 177.9 55" fill="none" stroke="url(#be)" stroke-width="1.6" opacity=".9"/>
+      <path d="M 100 10 L 177.9 55 L 177.9 145 L 100 190 L 22.1 145 L 22.1 55 Z" fill="none" stroke="#c9cfd8" stroke-width="0.8" opacity=".5"/>
+    </svg>
+    <h1 class="wordmark">VOLUMES</h1>
+  </div>
+
+  <p class="subline">Volumes buys and sells data for physical AI.</p>
+
+  <a class="contact-btn" id="contactBtn" href="mailto:hello@volumes.cloud">CONTACT&nbsp;VOLUMES</a>
+</main>
+
+<footer>© VOLUMES, INC. · BROOKLYN NAVY YARD, NY</footer>
+
+<dialog id="contactDialog" aria-labelledby="dialogTitle">
+  <div class="panel">
+    <button class="close" id="closeBtn" type="button" aria-label="Close contact panel">×</button>
+
+    <!-- step 1: role -->
+    <section class="step" id="stepRole">
+      <p class="eyebrow" id="dialogTitle">CONTACT VOLUMES</p>
+      <h2 class="q" id="roleHeading" tabindex="-1">I am a —</h2>
+      <div class="roles">
+        <button class="role" type="button" data-role="Buyer">BUYER</button>
+        <button class="role" type="button" data-role="Seller">SELLER</button>
+        <button class="role" type="button" id="investorBtn">INVESTOR</button>
+      </div>
+    </section>
+
+    <!-- step 2a: data multi-select -->
+    <section class="step" id="stepData" hidden>
+      <button class="back" type="button" data-back>← BACK</button>
+      <p class="eyebrow" id="dataEyebrow">BUYER</p>
+      <h2 class="q" id="dataHeading" tabindex="-1">What data are you interested in buying?</h2>
+
+      <div class="notsure">
+        <button class="chip chip-notsure" type="button" aria-pressed="false" data-item="Not sure yet">Not sure yet</button>
+      </div>
+
+      <div id="catList"></div>
+
+      <button class="compose" id="composeBtn" type="button" disabled>COMPOSE EMAIL → HELLO@VOLUMES.CLOUD</button>
+      <p class="count" id="count" aria-live="polite">Select one or more</p>
+
+      <div class="mailguard" id="mailGuard" hidden>
+        <p class="mailguard-note">If your mail app didn’t open, copy this and send it to
+          <span class="addr">hello@volumes.cloud</span>:</p>
+        <label class="visually-hidden" for="mailText">Composed email text</label>
+        <textarea id="mailText" readonly rows="6"></textarea>
+        <button class="copy" id="copyBtn" type="button">COPY EMAIL TEXT</button>
+      </div>
+    </section>
+
+    <!-- step 2b: investor -->
+    <section class="step" id="stepInvestor" hidden>
+      <button class="back" type="button" data-back>← BACK</button>
+      <p class="eyebrow">INVESTOR ACCESS</p>
+      <h2 class="q" id="investorHeading" tabindex="-1">Log in for company updates</h2>
+
+      <div class="field">
+        <label class="visually-hidden" for="invUser">Username</label>
+        <input type="text" id="invUser" name="username" placeholder="Username" autocomplete="off">
+      </div>
+      <div class="field">
+        <label class="visually-hidden" for="invPass">Password</label>
+        <input type="password" id="invPass" name="password" placeholder="Password" autocomplete="off">
+      </div>
+      <button class="login" id="loginBtn" type="button">LOG IN</button>
+      <p class="login-note" id="loginNote" aria-live="polite"></p>
+
+      <hr class="divider">
+
+      <p class="asterisk">* <em>Volumes Inc. is not currently accepting new investors.</em> Leave your email to be notified when that changes.</p>
+      <div class="notify">
+        <div class="field">
+          <label class="visually-hidden" for="invEmail">Your email</label>
+          <input type="email" id="invEmail" placeholder="you@fund.com">
+        </div>
+        <button class="notify-btn" id="notifyBtn" type="button">NOTIFY&nbsp;ME</button>
+      </div>
+
+      <div class="mailguard" id="invMailGuard" hidden>
+        <p class="mailguard-note">If your mail app didn’t open, copy this and send it to
+          <span class="addr">hello@volumes.cloud</span>:</p>
+        <label class="visually-hidden" for="invMailText">Composed email text</label>
+        <textarea id="invMailText" readonly rows="3"></textarea>
+        <button class="copy" id="invCopyBtn" type="button">COPY EMAIL TEXT</button>
+      </div>
+    </section>
+
+  </div>
+</dialog>
+
+<script src="js/flow.js" defer></script>
+<script>
+/* Hero gate: WebGL-capable desktops get the live cloud; everyone else
+   (no WebGL, reduced motion, mobile, low power) gets the static poster
+   rendered from the same scene. ?static=1 / ?hero=1 force either path. */
+(function () {
+  var hero = document.getElementById('hero');
+  var q = new URLSearchParams(location.search);
+  var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var coarseSmall = matchMedia('(pointer: coarse)').matches &&
+                    Math.min(screen.width, screen.height) < 768;
+  var lowPower = (navigator.deviceMemory && navigator.deviceMemory < 4) ||
+                 (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+  var webgl = false;
+  try {
+    var c = document.createElement('canvas');
+    webgl = !!(c.getContext('webgl2') || c.getContext('webgl'));
+  } catch (e) { webgl = false; }
+
+  var usePoster = q.has('static') || !webgl || reduced || coarseSmall || lowPower;
+  if (q.has('hero') || q.has('poster')) usePoster = false;
+
+  if (usePoster) {
+    hero.classList.add('poster');
+    return;
+  }
+
+  /* The cloud is an enhancement: let the page paint and settle first,
+     then load Three.js off the critical path. */
+  function boot() {
+    import('./js/hero.js')
+      .then(function (m) { m.start(hero, { poster: q.has('poster') }); })
+      .catch(function () { hero.classList.add('poster'); });
+  }
+  function whenIdle() {
+    if (q.has('poster')) { boot(); return; } /* poster build: no delay */
+    if ('requestIdleCallback' in window) requestIdleCallback(boot, { timeout: 2000 });
+    else setTimeout(boot, 250);
+  }
+  if (document.readyState === 'complete') whenIdle();
+  else window.addEventListener('load', whenIdle);
+})();
+</script>
+</body>
+</html>

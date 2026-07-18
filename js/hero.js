@@ -1,0 +1,195 @@
+/* Volumes point-cloud hero — Three.js, one draw call.
+   A stylized, downsampled warehouse interior (never licensable fidelity):
+   floor, rack columns, warm shelf beams, one overhead light streak,
+   teal instrument accents, drifting dust. The pointer deforms the field
+   locally; the field springs back. Everything else is still. */
+
+import * as THREE from '../vendor/three.module.min.js';
+
+export function start(container, opts) {
+  opts = opts || {};
+
+  var DPR = Math.min(window.devicePixelRatio || 1, 2);
+  var W = opts.poster ? 1600 : container.clientWidth;
+  var H = opts.poster ? 1000 : container.clientHeight;
+
+  var renderer = new THREE.WebGLRenderer({
+    antialias: false,
+    alpha: false,
+    preserveDrawingBuffer: !!opts.poster
+  });
+  renderer.setPixelRatio(opts.poster ? 1 : DPR);
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x000000, 1);
+  container.appendChild(renderer.domElement);
+
+  var camera = new THREE.PerspectiveCamera(75, W / H, 10, 4000);
+  camera.position.set(0, 30, 0);
+  camera.lookAt(0, -35, -700); /* slight downward pitch: the floor must read */
+  var scene = new THREE.Scene();
+
+  /* ---------- build the capture ---------- */
+  /* Coordinates mirror the approved comp: x right, y up, depth away from
+     camera. The cloud group sits at Z=-700 and sways around its own axis. */
+  var D = 2; /* density factor → ~13k points */
+  var pos = [], col = [], size = [], amp = [], seed = [];
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pt(x, yDown, zMock, r, g, b, s, driftAmp, vMin, vMax) {
+    pos.push(x, -yDown, -zMock);
+    var v = rnd(vMin === undefined ? 0.55 : vMin, vMax === undefined ? 1.0 : vMax);
+    col.push(r / 255 * v, g / 255 * v, b / 255 * v);
+    size.push(s);
+    amp.push(driftAmp || 0);
+    seed.push(Math.random());
+  }
+
+  var i, rx, ry, side;
+  /* floor — the brightest large surface after the streak */
+  for (i = 0; i < 2600 * D; i++) {
+    if (Math.random() < .75) pt(rnd(-900, 900), rnd(180, 260) + rnd(-8, 8), rnd(-500, 900), 200, 190, 172, rnd(.5, 1.2), 0, .6, 1.0);
+    else pt(rnd(-900, 900), rnd(180, 260) + rnd(-8, 8), rnd(-500, 900), 130, 140, 150, rnd(.5, 1.2), 0, .6, 1.0);
+  }
+  /* rack columns — legible verticals */
+  var racks = [-620, -380, 380, 620];
+  for (var c = 0; c < racks.length; c++) {
+    rx = racks[c];
+    for (i = 0; i < 260 * D; i++) pt(rx + rnd(-14, 14), rnd(-260, 200), rnd(-300, 700), 150, 155, 165, rnd(.5, 1.3), 0, .65, 1.0);
+  }
+  /* warm shelf beams — the orange that says "warehouse" */
+  var beams = [-180, -40, 100];
+  for (var bIdx = 0; bIdx < beams.length; bIdx++) {
+    ry = beams[bIdx];
+    for (i = 0; i < 330 * D; i++) {
+      side = Math.random() < .5 ? -1 : 1;
+      pt(side * rnd(380, 620), ry + rnd(-10, 10), rnd(-300, 700), 205, 122, 58, rnd(.6, 1.4), 0, .7, 1.05);
+    }
+  }
+  /* overhead light streak */
+  for (i = 0; i < 420 * D; i++) pt(rnd(-260, 260), rnd(-330, -290) + rnd(-8, 8), rnd(-100, 400), 240, 244, 250, rnd(.7, 1.7), 0, .8, 1.2);
+  /* teal instrument accents */
+  for (i = 0; i < 120 * D; i++) pt(rnd(-700, 700), rnd(-260, 240), rnd(-400, 800), 62, 198, 198, rnd(.4, 1.0));
+  /* drifting dust — atmosphere, must stay quieter than structure */
+  for (i = 0; i < 950 * D; i++) pt(rnd(-900, 900), rnd(-320, 250), rnd(-500, 900), 200, 205, 215, rnd(.3, .7), rnd(2, 5), .3, .6);
+
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('aColor', new THREE.Float32BufferAttribute(col, 3));
+  geo.setAttribute('aSize', new THREE.Float32BufferAttribute(size, 1));
+  geo.setAttribute('aAmp', new THREE.Float32BufferAttribute(amp, 1));
+  geo.setAttribute('aSeed', new THREE.Float32BufferAttribute(seed, 1));
+
+  var uniforms = {
+    uTime: { value: 0 },
+    uDPR: { value: opts.poster ? 1 : DPR },
+    uPointer: { value: new THREE.Vector3(1e5, 1e5, -700) },
+    uStrength: { value: 0 }
+  };
+
+  var mat = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    transparent: false,
+    depthWrite: true,
+    vertexShader: [
+      'attribute vec3 aColor;',
+      'attribute float aSize;',
+      'attribute float aAmp;',
+      'attribute float aSeed;',
+      'uniform float uTime;',
+      'uniform float uDPR;',
+      'uniform vec3 uPointer;',
+      'uniform float uStrength;',
+      'varying vec3 vColor;',
+      'void main(){',
+      '  vColor = aColor;',
+      '  vec4 wp = modelMatrix * vec4(position, 1.0);',
+      /* dust drift, structure stays still */
+      '  wp.y += sin(uTime * 0.4 + aSeed * 6.2831) * aAmp;',
+      '  wp.x += cos(uTime * 0.27 + aSeed * 4.7) * aAmp * 0.6;',
+      /* local deformation under the pointer, springs back via uStrength */
+      '  vec3 d = wp.xyz - uPointer;',
+      '  float dist = length(d);',
+      '  float fall = smoothstep(175.0, 0.0, dist);',
+      '  wp.xyz += normalize(d + vec3(0.0001)) * fall * uStrength * 42.0;',
+      '  vec4 mv = viewMatrix * wp;',
+      '  gl_Position = projectionMatrix * mv;',
+      '  gl_PointSize = clamp(aSize * 1.9 * uDPR * (520.0 / -mv.z), 0.75, 6.0);',
+      '}'
+    ].join('\n'),
+    fragmentShader: [
+      'varying vec3 vColor;',
+      'void main(){ gl_FragColor = vec4(vColor, 1.0); }'
+    ].join('\n')
+  });
+
+  var cloud = new THREE.Points(geo, mat);
+  var group = new THREE.Group();
+  group.position.set(0, 0, -700);
+  group.add(cloud);
+  scene.add(group);
+
+  /* ---------- pointer → world point on the cloud plane ---------- */
+  var pointerTarget = new THREE.Vector3(1e5, 1e5, -700);
+  var strengthTarget = 0;
+  var lastMove = -1e4;
+  var rayDir = new THREE.Vector3();
+
+  function onMove(e) {
+    var ndcX = (e.clientX / container.clientWidth) * 2 - 1;
+    var ndcY = -(e.clientY / container.clientHeight) * 2 + 1;
+    rayDir.set(ndcX, ndcY, 0.5).unproject(camera).sub(camera.position).normalize();
+    var t = (-700 - camera.position.z) / rayDir.z;
+    pointerTarget.copy(camera.position).addScaledVector(rayDir, t);
+    lastMove = performance.now();
+  }
+  if (!opts.poster) {
+    window.addEventListener('pointermove', onMove, { passive: true });
+    window.addEventListener('pointerleave', function () { lastMove = -1e4; });
+  }
+
+  /* ---------- loop ---------- */
+  var t = 0;
+  var running = true;
+  var stats = { frames: 0, since: performance.now() };
+  window.__heroStats = stats;
+  window.__hero = { renderer: renderer, scene: scene, camera: camera, uniforms: uniforms, group: group };
+
+  function frame() {
+    if (!running) return;
+    t += 0.0022;
+    uniforms.uTime.value = t * 10.0;
+    group.rotation.y = Math.sin(t) * 0.06;
+
+    strengthTarget = (performance.now() - lastMove < 120) ? 1 : 0;
+    uniforms.uStrength.value += (strengthTarget - uniforms.uStrength.value) * 0.1;
+    uniforms.uPointer.value.lerp(pointerTarget, 0.18);
+
+    renderer.render(scene, camera);
+    stats.frames++;
+    requestAnimationFrame(frame);
+  }
+
+  if (opts.poster) {
+    /* deterministic single frame for the build-time poster capture */
+    group.rotation.y = 0.02;
+    renderer.render(scene, camera);
+    window.__posterReady = true;
+    return renderer.domElement;
+  }
+
+  function onResize() {
+    W = container.clientWidth; H = container.clientHeight;
+    camera.aspect = W / H;
+    camera.updateProjectionMatrix();
+    renderer.setSize(W, H);
+  }
+  window.addEventListener('resize', onResize);
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { running = false; }
+    else if (!running) { running = true; requestAnimationFrame(frame); }
+  });
+
+  requestAnimationFrame(frame);
+  return renderer.domElement;
+}
