@@ -58,6 +58,12 @@ body {
   position: fixed; inset: 0; z-index: 1; pointer-events: none;
   background: radial-gradient(ellipse 70% 55% at 50% 62%, rgba(10, 60, 64, .35), transparent 70%);
 }
+/* quiet the cloud behind the text column so the sentence stays legible
+   over the bright beam band on tall phone screens */
+.scrim {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse 60% 46% at 50% 50%, rgba(0, 0, 0, .52), transparent 72%);
+}
 
 /* ---------- the five things ---------- */
 .stage {
