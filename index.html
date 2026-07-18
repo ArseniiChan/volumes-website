@@ -14,8 +14,31 @@
 <meta name="twitter:title" content="Volumes — Data for Physical AI">
 <meta name="twitter:description" content="Volumes buys and sells data for physical AI.">
 <meta name="twitter:image" content="https://arseniichan.github.io/volumes-website/assets/og.png">
+<meta property="og:site_name" content="Volumes">
+<meta property="og:locale" content="en_US">
+<meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://arseniichan.github.io/volumes-website/">
 <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Volumes, Inc.",
+  "url": "https://arseniichan.github.io/volumes-website/",
+  "logo": "https://arseniichan.github.io/volumes-website/assets/og.png",
+  "email": "hello@volumes.cloud",
+  "description": "Volumes buys and sells data for physical AI.",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "Brooklyn Navy Yard",
+    "addressLocality": "Brooklyn",
+    "addressRegion": "NY",
+    "addressCountry": "US"
+  }
+}
+</script>
 <link rel="preload" href="assets/fonts/inter-var-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/main.css">
 </head>
@@ -142,7 +165,8 @@
   var coarseSmall = matchMedia('(pointer: coarse)').matches &&
                     Math.min(screen.width, screen.height) < 768;
   var lowPower = (navigator.deviceMemory && navigator.deviceMemory < 4) ||
-                 (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+                 (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2) ||
+                 (navigator.connection && navigator.connection.saveData);
   var webgl = false;
   try {
     var c = document.createElement('canvas');
