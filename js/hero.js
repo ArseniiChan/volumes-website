@@ -214,11 +214,22 @@ export function start(container, opts) {
   ringCyl(A_wrist, 'z', 0, 4, 0, 9, 24, JOINT2, .8, 1.2);   /* wrist knuckle */
   ringCyl(A_wrist, 'y', 0, 16, 0, 8, 10, TEAL2, .9, 1.15);  /* teal collar */
   ringCyl(A_wrist, 'y', 0, 25, 0, 7, 8, STEEL, .8, 1.15);   /* palm */
-  ringCyl(A_wrist, 'y', -7, 38, 0, 2.8, 20, STEEL, .8, 1.2); /* finger */
-  ringCyl(A_wrist, 'y', 7, 38, 0, 2.8, 20, STEEL, .8, 1.2);  /* finger */
   j4.add(toPoints(A_wrist));
 
-  var arm = { j1: j1, j2: j2, j3: j3, j4: j4 };
+  /* parallel-jaw fingers: separate objects so the gripper can open/close */
+  function finger() {
+    var A = partArrays();
+    ringCyl(A, 'y', 0, 10, 0, 2.8, 20, STEEL, .8, 1.2);
+    var g3 = new THREE.Group();
+    g3.position.set(0, 28, 0);
+    g3.add(toPoints(A));
+    j4.add(g3);
+    return g3;
+  }
+  var fingerL = finger(), fingerR = finger();
+  fingerL.position.x = -8.5; fingerR.position.x = 8.5;
+
+  var arm = { j1: j1, j2: j2, j3: j3, j4: j4, fL: fingerL, fR: fingerR };
 
   /* ---------- pointer → world point on the cloud plane ---------- */
   var pointerTarget = new THREE.Vector3(1e5, 1e5, -700);
@@ -322,11 +333,16 @@ export function start(container, opts) {
     uniforms.uStrength.value += (strengthTarget - uniforms.uStrength.value) * 0.1;
     uniforms.uPointer.value.lerp(pointerTarget, 0.18);
 
-    /* the arm works: slow base sweep, gentle elbow flex, gripper kept low */
+    /* the arm works: slow base sweep, gentle elbow flex, gripper kept low.
+       The jaws close as the elbow dips — reach, pinch, release. */
     arm.j1.rotation.y = 0.25 + Math.sin(t * 2.1) * 0.38;
     arm.j2.rotation.z = 0.85 + Math.sin(t * 1.5 + 1.2) * 0.05;
     arm.j3.rotation.z = 1.52 + Math.sin(t * 2.6 + 0.5) * 0.10;
     arm.j4.rotation.z = 0.72 - Math.sin(t * 2.6 + 0.5) * 0.08;
+    var grip = Math.max(0, Math.sin(t * 2.6 + 0.9));
+    var gap = 8.5 - 5 * grip * grip;
+    arm.fL.position.x = -gap;
+    arm.fR.position.x = gap;
 
     var introK = Math.min(1, (performance.now() - introStart) / 3000);
     if (introK < 1) introPlayed = true;
