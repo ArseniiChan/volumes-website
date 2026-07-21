@@ -46,31 +46,24 @@ export function start(container, opts) {
     seed.push(Math.random());
   }
 
-  var i, rx, ry, side;
-  /* floor — the brightest large surface after the streak */
-  for (i = 0; i < 2600 * D; i++) {
-    if (Math.random() < .75) pt(rnd(-900, 900), rnd(180, 260) + rnd(-8, 8), rnd(-500, 900), 200, 190, 172, rnd(.5, 1.2), 0, .6, 1.0);
-    else pt(rnd(-900, 900), rnd(180, 260) + rnd(-8, 8), rnd(-500, 900), 130, 140, 150, rnd(.5, 1.2), 0, .6, 1.0);
+  var i;
+  /* A clean capture STAGE, not a literal warehouse: a soft ground haze that
+     grounds the turntable, one overhead key light, quiet atmosphere. Reads
+     as an intentional dark studio for a scan — restraint, not clutter. */
+
+  /* ground haze — a low, cool, fading floor centred under the stage */
+  for (i = 0; i < 1500 * D; i++) {
+    var gx = rnd(-780, 780), gz = rnd(-500, 820);
+    var fade = 1 - Math.min(1, Math.abs(gx) / 780);           /* brighter toward centre */
+    pt(gx, rnd(212, 250) + rnd(-6, 6), gz, 150, 156, 168, rnd(.4, 1.0), 0, .28, .32 + .5 * fade);
   }
-  /* rack columns — legible verticals */
-  var racks = [-620, -380, 380, 620];
-  for (var c = 0; c < racks.length; c++) {
-    rx = racks[c];
-    for (i = 0; i < 260 * D; i++) pt(rx + rnd(-14, 14), rnd(-260, 200), rnd(-300, 700), 150, 155, 165, rnd(.5, 1.3), 0, .65, 1.0);
-  }
-  /* warm shelf beams — the orange that says "warehouse" */
-  var beams = [-180, -40, 100];
-  for (var bIdx = 0; bIdx < beams.length; bIdx++) {
-    ry = beams[bIdx];
-    for (i = 0; i < 330 * D; i++) {
-      side = Math.random() < .5 ? -1 : 1;
-      pt(side * rnd(380, 620), ry + rnd(-10, 10), rnd(-300, 700), 205, 122, 58, rnd(.6, 1.4), 0, .7, 1.05);
-    }
-  }
-  /* overhead light streak */
-  for (i = 0; i < 420 * D; i++) pt(rnd(-260, 260), rnd(-330, -290) + rnd(-8, 8), rnd(-100, 400), 240, 244, 250, rnd(.7, 1.7), 0, .8, 1.2);
-  /* teal instrument accents */
-  for (i = 0; i < 120 * D; i++) pt(rnd(-700, 700), rnd(-260, 240), rnd(-400, 800), 62, 198, 198, rnd(.4, 1.0));
+  /* overhead key light — a soft luminous pool above the stage */
+  for (i = 0; i < 360 * D; i++) pt(rnd(-230, 230), rnd(-336, -292) + rnd(-6, 6), rnd(-120, 380), 236, 242, 250, rnd(.6, 1.5), 0, .5, 1.05);
+  /* a faint volumetric shaft falling from the key light toward the stage */
+  for (i = 0; i < 260 * D; i++) { var s = Math.random(); pt(rnd(-70, 70) * (1 + s), -300 + s * 480, rnd(-40, 220), 210, 220, 236, rnd(.35, .8), 0, .12, .28); }
+  /* whisper of warm + teal near the floor (work light), low and contained */
+  for (i = 0; i < 90 * D; i++) pt(rnd(-300, 300), rnd(150, 220), rnd(-60, 320), 206, 138, 78, rnd(.4, .9), 0, .35, .7);
+  for (i = 0; i < 110 * D; i++) pt(rnd(-560, 560), rnd(-140, 200), rnd(-300, 700), 62, 198, 198, rnd(.3, .75));
 
   /* the robot + its table are built together below as one rig (armRoot),
      so the machine always sits on its surface. */
