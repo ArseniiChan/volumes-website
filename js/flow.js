@@ -76,7 +76,7 @@
     document.getElementById('loginNote').textContent = '';
     document.getElementById('detailsText').value = '';
     var s = document.getElementById('dataSearch');
-    if (s) { s.value = ''; filterChips(''); }
+    if (s) { s.value = ''; document.getElementById('searchClear').hidden = true; filterChips(''); }
     syncCount();
     syncCatBadges();
   }
@@ -186,6 +186,8 @@
         section.classList.remove('cat-hidden');
         collapseCat(section.querySelector('.cat-toggle'));
         section.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('chip-hidden'); });
+        var total = section.querySelectorAll('.chip').length;
+        section.querySelector('.cat-count').textContent = total;
       });
       if (notsure) notsure.hidden = false;
       noMatches.hidden = true;
@@ -206,6 +208,7 @@
         section.classList.remove('cat-hidden');
         toggle.setAttribute('aria-expanded', 'true');
         document.getElementById(toggle.getAttribute('aria-controls')).hidden = false;
+        section.querySelector('.cat-count').textContent = shown; /* match count, not stale total */
         anyVisible = true;
       } else {
         section.classList.add('cat-hidden');
@@ -215,7 +218,17 @@
   }
 
   var searchInput = document.getElementById('dataSearch');
-  searchInput.addEventListener('input', function () { filterChips(searchInput.value); });
+  var searchClear = document.getElementById('searchClear');
+  searchInput.addEventListener('input', function () {
+    searchClear.hidden = searchInput.value.length === 0;
+    filterChips(searchInput.value);
+  });
+  searchClear.addEventListener('click', function () {
+    searchInput.value = '';
+    searchClear.hidden = true;
+    filterChips('');
+    searchInput.focus();
+  });
 
   /* one delegated handler covers every chip, incl. "Not sure yet" */
   document.getElementById('stepData').addEventListener('click', function (e) {

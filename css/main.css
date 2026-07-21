@@ -321,6 +321,13 @@ dialog::backdrop {
   color: var(--teal);
   background: var(--teal-wash);
 }
+/* shape cue so selection isn't signalled by color alone */
+.chip[aria-pressed="true"]::before {
+  content: '✓';
+  margin-right: .45em;
+  font-size: .85em;
+  opacity: .9;
+}
 .notsure { margin-bottom: 1.1rem; }
 .chip-notsure { min-height: 44px; padding: .6rem 1.2rem; }
 
@@ -341,11 +348,20 @@ dialog::backdrop {
   border: 1px solid var(--line);
   color: var(--ink);
   font-family: inherit; font-size: .82rem; letter-spacing: .04em;
-  padding: .75rem 1rem .75rem 2.4rem;
+  padding: .75rem 2.8rem .75rem 2.4rem;
   min-height: 44px;
 }
 .search-field input::placeholder { color: var(--dim); }
 .search-field input:focus { outline: none; border-color: var(--teal); }
+.search-clear {
+  position: absolute; right: .3rem;
+  width: 40px; height: 40px;
+  border: none; background: none; color: var(--dim);
+  font-size: 1.2rem; line-height: 1; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color .2s ease-out;
+}
+.search-clear:hover { color: var(--ink); }
 .no-matches {
   color: var(--dim);
   font-size: .74rem; letter-spacing: .04em; line-height: 1.6;
