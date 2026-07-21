@@ -65,6 +65,77 @@ body {
   background: radial-gradient(ellipse 60% 46% at 50% 50%, rgba(0, 0, 0, .52), transparent 72%);
 }
 
+/* ---------- instrument HUD ---------- */
+.hud {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  font-family: var(--font);
+}
+.hud-grid {
+  position: absolute; inset: 0;
+  opacity: .10;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72'%3E%3Cpath d='M36 31v10M31 36h10' stroke='%23c9cfd8' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  -webkit-mask-image: radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent 90%);
+          mask-image: radial-gradient(ellipse 85% 80% at 50% 48%, #000 55%, transparent 90%);
+}
+.hud-corner {
+  position: absolute; width: 26px; height: 26px;
+  border: 1px solid rgba(201, 207, 216, .32);
+}
+.hud-corner.tl { top: 20px; left: 20px; border-right: none; border-bottom: none; }
+.hud-corner.tr { top: 20px; right: 20px; border-left: none; border-bottom: none; }
+.hud-corner.bl { bottom: 20px; left: 20px; border-right: none; border-top: none; }
+.hud-corner.br { bottom: 20px; right: 20px; border-left: none; border-top: none; }
+.hud-readout {
+  position: absolute; top: 22px; left: 58px;
+  display: flex; align-items: center; gap: .5em;
+  font-size: .58rem; letter-spacing: .22em;
+  color: rgba(201, 207, 216, .5);
+}
+.hud-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--teal);
+  box-shadow: 0 0 6px rgba(62, 198, 198, .8);
+  animation: hud-pulse 2.6s ease-in-out infinite;
+}
+@keyframes hud-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
+
+.hud-track {
+  position: absolute;
+  border: 1px solid rgba(62, 198, 198, .45);
+  width: 92px; height: 78px;
+}
+.hud-track::before, .hud-track::after {
+  content: ''; position: absolute; width: 6px; height: 6px;
+  border: 1px solid rgba(62, 198, 198, .8);
+}
+.hud-track::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+.hud-track::after { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+.hud-label {
+  position: absolute; top: -1.5em; left: 0;
+  font-size: .52rem; letter-spacing: .18em;
+  color: rgba(62, 198, 198, .75);
+  white-space: nowrap;
+}
+/* positioned over the arm (right of the lockup) and the light streak */
+.hud-track--arm    { top: 46%; left: 63%; width: 128px; height: 118px; }
+.hud-track--streak { top: 12%; left: 40%; width: 150px; height: 46px; opacity: .6; }
+
+@media (max-width: 600px) {
+  .hud-corner { width: 18px; height: 18px; }
+  .hud-corner.tl, .hud-corner.tr { top: 14px; }
+  .hud-corner.bl, .hud-corner.br { bottom: 14px; }
+  .hud-corner.tl, .hud-corner.bl { left: 14px; }
+  .hud-corner.tr, .hud-corner.br { right: 14px; }
+  .hud-readout { top: 15px; left: 40px; font-size: .5rem; letter-spacing: .16em; }
+  /* the arm shares the text band on a phone — brackets would collide with
+     the sentence, so the frame + grid + readout carry the instrument read */
+  .hud-track { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hud-dot { animation: none; }
+}
+
 /* ---------- the five things ---------- */
 .stage {
   position: fixed; inset: 0; z-index: 2;
@@ -252,6 +323,36 @@ dialog::backdrop {
 }
 .notsure { margin-bottom: 1.1rem; }
 .chip-notsure { min-height: 44px; padding: .6rem 1.2rem; }
+
+/* taxonomy search */
+.search-field {
+  position: relative;
+  display: flex; align-items: center;
+  margin: 0 0 1.1rem;
+}
+.search-icon {
+  position: absolute; left: 1rem;
+  color: var(--dim);
+  pointer-events: none;
+}
+.search-field input {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: inherit; font-size: .82rem; letter-spacing: .04em;
+  padding: .75rem 1rem .75rem 2.4rem;
+  min-height: 44px;
+}
+.search-field input::placeholder { color: var(--dim); }
+.search-field input:focus { outline: none; border-color: var(--teal); }
+.no-matches {
+  color: var(--dim);
+  font-size: .74rem; letter-spacing: .04em; line-height: 1.6;
+  padding: .8rem .2rem;
+}
+.cat.cat-hidden { display: none; }
+.chip.chip-hidden { display: none; }
 
 .details-field { margin-top: 1.3rem; }
 .details-label {

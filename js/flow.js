@@ -75,6 +75,8 @@
     document.getElementById('invMailGuard').hidden = true;
     document.getElementById('loginNote').textContent = '';
     document.getElementById('detailsText').value = '';
+    var s = document.getElementById('dataSearch');
+    if (s) { s.value = ''; filterChips(''); }
     syncCount();
     syncCatBadges();
   }
@@ -171,6 +173,49 @@
     var chips = document.getElementById(toggle.getAttribute('aria-controls'));
     if (chips) chips.hidden = true;
   }
+
+  /* live search across all 55 types: matching categories auto-expand,
+     empty query restores the collapsed default. */
+  function filterChips(raw) {
+    var q = raw.trim().toLowerCase();
+    var notsure = document.querySelector('.notsure');
+    var noMatches = document.getElementById('noMatches');
+
+    if (!q) {
+      document.querySelectorAll('.cat').forEach(function (section) {
+        section.classList.remove('cat-hidden');
+        collapseCat(section.querySelector('.cat-toggle'));
+        section.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('chip-hidden'); });
+      });
+      if (notsure) notsure.hidden = false;
+      noMatches.hidden = true;
+      return;
+    }
+
+    if (notsure) notsure.hidden = true;
+    var anyVisible = false;
+    document.querySelectorAll('.cat').forEach(function (section) {
+      var shown = 0;
+      section.querySelectorAll('.chip').forEach(function (c) {
+        var hit = c.getAttribute('data-item').toLowerCase().indexOf(q) !== -1;
+        c.classList.toggle('chip-hidden', !hit);
+        if (hit) shown++;
+      });
+      var toggle = section.querySelector('.cat-toggle');
+      if (shown > 0) {
+        section.classList.remove('cat-hidden');
+        toggle.setAttribute('aria-expanded', 'true');
+        document.getElementById(toggle.getAttribute('aria-controls')).hidden = false;
+        anyVisible = true;
+      } else {
+        section.classList.add('cat-hidden');
+      }
+    });
+    noMatches.hidden = anyVisible;
+  }
+
+  var searchInput = document.getElementById('dataSearch');
+  searchInput.addEventListener('input', function () { filterChips(searchInput.value); });
 
   /* one delegated handler covers every chip, incl. "Not sure yet" */
   document.getElementById('stepData').addEventListener('click', function (e) {

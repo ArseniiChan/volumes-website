@@ -48,6 +48,26 @@
 <div class="scrim" aria-hidden="true"></div>
 <div class="glow" aria-hidden="true"></div>
 
+<!-- Instrument HUD: honest capture-viewport chrome over the live cloud.
+     Registration marks + a bracket that labels the actual manipulator.
+     No false "real capture" provenance — that waits for real geometry. -->
+<div class="hud" aria-hidden="true">
+  <div class="hud-grid"></div>
+  <span class="hud-corner tl"></span>
+  <span class="hud-corner tr"></span>
+  <span class="hud-corner bl"></span>
+  <span class="hud-corner br"></span>
+  <div class="hud-readout">
+    <span class="hud-dot"></span>VOL·LIVE — WebGL POINT FIELD
+  </div>
+  <div class="hud-track hud-track--arm">
+    <span class="hud-label">MANIPULATOR · 6-AXIS</span>
+  </div>
+  <div class="hud-track hud-track--streak">
+    <span class="hud-label">LIGHT</span>
+  </div>
+</div>
+
 <main class="stage">
   <div class="lockup">
     <svg class="mark" viewBox="0 0 200 200" role="img" aria-label="Volumes logo">
@@ -96,11 +116,21 @@
       <p class="eyebrow" id="dataEyebrow">BUYER</p>
       <h2 class="q" id="dataHeading" tabindex="-1">What data are you interested in buying?</h2>
 
+      <div class="search-field">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" fill="none">
+          <circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M9.5 9.5 13 13" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <label class="visually-hidden" for="dataSearch">Search data types</label>
+        <input type="text" id="dataSearch" placeholder="Search 55 data types…" autocomplete="off" spellcheck="false">
+      </div>
+
       <div class="notsure">
         <button class="chip chip-notsure" type="button" aria-pressed="false" data-item="Not sure yet">Not sure yet</button>
       </div>
 
       <div id="catList"></div>
+      <p class="no-matches" id="noMatches" hidden>No matches. Try a broader term, or use “Not sure yet”.</p>
 
       <div class="field details-field">
         <label class="details-label" for="detailsText">ANYTHING SPECIFIC? <span>scale, environment, timeline — optional</span></label>
