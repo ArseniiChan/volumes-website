@@ -186,9 +186,15 @@ export function start(container, opts) {
     return new THREE.Points(g2, mat);
   }
 
-  /* bench top is at mock yDown 100, z 140 → local (x, -100, -140) */
+  /* bench top is at mock yDown 100, z 140 → local (x, -100, -140).
+     In portrait the arm is pushed right + down so it clears the centered
+     sentence; landscape/desktop keeps it beside the lockup. */
   var armRoot = new THREE.Group();
-  armRoot.position.set(310, -100, -140);
+  function placeArm(aspect) {
+    if (aspect < 0.8) armRoot.position.set(392, -128, -110);
+    else armRoot.position.set(310, -100, -140);
+  }
+  placeArm(W / H);
   group.add(armRoot);
 
   var j1 = new THREE.Group(); armRoot.add(j1);            /* base yaw */
@@ -390,6 +396,7 @@ export function start(container, opts) {
     camera.aspect = W / H;
     camera.fov = fovFor(camera.aspect);
     camera.updateProjectionMatrix();
+    placeArm(camera.aspect);
     renderer.setSize(W, H);
   }
   window.addEventListener('resize', onResize);
