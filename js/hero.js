@@ -72,15 +72,8 @@ export function start(container, opts) {
   /* teal instrument accents */
   for (i = 0; i < 120 * D; i++) pt(rnd(-700, 700), rnd(-260, 240), rnd(-400, 800), 62, 198, 198, rnd(.4, 1.0));
 
-  /* ---- workbench for the manipulator (the arm itself is articulated,
-     built as its own point objects after the material exists) ---- */
-  var BENCH = [152, 147, 138], WARM = [205, 122, 58];
-  for (i = 0; i < 850; i++) pt(rnd(130, 430), 100 + rnd(0, 12), rnd(60, 200), BENCH[0], BENCH[1], BENCH[2], rnd(.6, 1.0), 0, .6, .95);
-  [[142, 72], [418, 72], [142, 188], [418, 188]].forEach(function (leg) {
-    for (var k = 0; k < 70; k++) pt(leg[0] + rnd(-5, 5), rnd(112, 178), leg[1] + rnd(-5, 5), BENCH[0], BENCH[1], BENCH[2], rnd(.55, .9), 0, .55, .85);
-  });
-  /* the workpiece on the bench, in the gripper's work zone */
-  for (i = 0; i < 90; i++) pt(rnd(155, 195), rnd(90, 102), rnd(115, 155), WARM[0], WARM[1], WARM[2], rnd(.6, 1.0), 0, .7, 1.0);
+  /* the robot + its table are built together below as one rig (armRoot),
+     so the machine always sits on its surface. */
   /* drifting dust — atmosphere, must stay quieter than structure */
   for (i = 0; i < 950 * D; i++) pt(rnd(-900, 900), rnd(-320, 250), rnd(-500, 900), 200, 205, 215, rnd(.3, .7), rnd(2, 5), .3, .6);
 
@@ -160,20 +153,43 @@ export function start(container, opts) {
     A.amp.push(0);
     A.seed.push(Math.random());
   }
-  /* cylinder as stacked rings along a local axis, centered at (ox,oy,oz) */
+  /* cylinder as stacked rings along a local axis, centered at (ox,oy,oz).
+     Dense enough that the silhouette reads as a solid scanned part.
+     Brightness lifts with height (yTop) so the rig looks lit from above. */
   function ringCyl(A, axis, ox, oy, oz, r, len, c, vMin, vMax) {
-    var nRings = Math.max(2, Math.round(len / 5));
-    var perRing = Math.max(10, Math.round(r * 1.6));
+    var nRings = Math.max(4, Math.round(len / 1.6));   /* dense: the subject is a high-fidelity scan */
+    var perRing = Math.max(30, Math.round(r * 4.2));
     for (var q = 0; q < nRings; q++) {
       var a = -len / 2 + len * q / (nRings - 1);
       for (var k = 0; k < perRing; k++) {
-        var ang = (k / perRing) * 6.2832 + rnd(-.12, .12);
-        var rr = r * rnd(.94, 1.05);
+        var ang = (k / perRing) * 6.2832 + rnd(-.1, .1);
+        var rr = r * rnd(.96, 1.04);
         var u = Math.cos(ang) * rr, w = Math.sin(ang) * rr;
         if (axis === 'y') partPush(A, ox + u, oy + a, oz + w, c, vMin, vMax);
         else if (axis === 'z') partPush(A, ox + u, oy + w, oz + a, c, vMin, vMax);
         else partPush(A, ox + a, oy + u, oz + w, c, vMin, vMax);
       }
+    }
+  }
+  /* dense planar grid → reads as a genuine solid surface, not a scatter */
+  function slab(A, x0, x1, y0, y1, z0, z1, nx, nz, c, vMin, vMax) {
+    for (var ix = 0; ix < nx; ix++) for (var iz = 0; iz < nz; iz++) {
+      partPush(A, x0 + (x1 - x0) * (ix / (nx - 1)) + rnd(-2, 2),
+                  rnd(y0, y1),
+                  z0 + (z1 - z0) * (iz / (nz - 1)) + rnd(-2, 2), c, vMin, vMax);
+    }
+  }
+  /* filled disc — an ellipse in perspective reads as solid ground at any angle */
+  function disc(A, cx, cy, cz, r, n, c, vMin, vMax) {
+    for (var k = 0; k < n; k++) {
+      var t = Math.random() * 6.2832, rr = Math.sqrt(Math.random()) * r;
+      partPush(A, cx + Math.cos(t) * rr, cy + rnd(-1.5, 1.5), cz + Math.sin(t) * rr, c, vMin, vMax);
+    }
+  }
+  function ring(A, cx, cy, cz, r, n, c, vMin, vMax) {
+    for (var k = 0; k < n; k++) {
+      var t = (k / n) * 6.2832;
+      partPush(A, cx + Math.cos(t) * r * rnd(.99, 1.01), cy + rnd(-1, 1), cz + Math.sin(t) * r * rnd(.99, 1.01), c, vMin, vMax);
     }
   }
   function toPoints(A) {
@@ -186,56 +202,85 @@ export function start(container, opts) {
     return new THREE.Points(g2, mat);
   }
 
-  /* bench top is at mock yDown 100, z 140 → local (x, -100, -140).
-     In portrait the arm is pushed right + down so it clears the centered
-     sentence; landscape/desktop keeps it beside the lockup. */
+  /* The rig sits in armRoot-local space: +y up, tabletop at y=0 (the robot
+     bolts to it), legs drop to the floor (~y-84), robot builds upward.
+     The whole thing moves as a unit so the machine never leaves its table. */
+  var TABLE = [150, 150, 158], WARM = [214, 150, 92], EDGE = [186, 189, 197];
   var armRoot = new THREE.Group();
   function placeArm(aspect) {
-    if (aspect < 0.8) armRoot.position.set(392, -128, -110);
-    else armRoot.position.set(310, -100, -140);
+    if (aspect < 0.8) { armRoot.position.set(12, -300, 20); armRoot.scale.setScalar(0.95); }  /* portrait: lower-frame, below the copy */
+    else { armRoot.position.set(20, -230, 150); armRoot.scale.setScalar(1.35); }              /* landscape: lower-frame centerpiece */
   }
   placeArm(W / H);
   group.add(armRoot);
 
+  /* --- the robot stands on a glowing teal scan-turntable. Teal pops where
+     grey goes invisible, so the ring plants the robot as solid ground at any
+     angle. A bright arc sweeps around it (rotated in frame()) — an active
+     scan in progress, which is exactly the capture story. --- */
+  var A_static = partArrays();
+  disc(A_static, 0, -1, 0, 86, 1000, TEAL2, .26, .5);    /* filled glow platform */
+  ring(A_static, 0, -2, 0, 110, 360, TEAL2, .3, .6);     /* faint outer halo */
+  for (var yy = -4; yy >= -16; yy -= 3) ring(A_static, 0, yy, 0, 86, 220, EDGE, .5, .82); /* platform edge wall */
+  armRoot.add(toPoints(A_static));
+
+  /* the rotating scan plate: bright rim + a hot sweeping arc */
+  var A_scan = partArrays();
+  ring(A_scan, 0, 0, 0, 88, 640, TEAL2, .8, 1.15);       /* bright base rim */
+  for (i = 0; i < 340; i++) {                             /* the sweep arc (bright segment) */
+    var sa = (i / 340) * 0.85;
+    partPush(A_scan, Math.cos(sa) * 88 * rnd(.99, 1.01), rnd(-1, 1), Math.sin(sa) * 88 * rnd(.99, 1.01), [190, 255, 255], 1.05, 1.5);
+  }
+  var scanPlate = toPoints(A_scan);
+  armRoot.add(scanPlate);
+
+  /* warm work-light pool + the part being handled, under the gripper */
+  var A_work = partArrays();
+  for (i = 0; i < 320; i++) partPush(A_work, rnd(-46, 46), rnd(-1, 3), rnd(-38, 42), WARM, .45, .85); /* glow pool on the table */
+  for (i = 0; i < 170; i++) partPush(A_work, rnd(-17, 17), rnd(1, 24), 42 + rnd(0, 26), WARM, .8, 1.15); /* workpiece block */
+  armRoot.add(toPoints(A_work));
+
+  /* --- the articulated arm, base bolted to the tabletop (local y0) --- */
   var j1 = new THREE.Group(); armRoot.add(j1);            /* base yaw */
   var A_base = partArrays();
-  ringCyl(A_base, 'y', 0, 10, 0, 26, 20, STEEL, .7, 1.0); /* pedestal */
-  ringCyl(A_base, 'y', 0, 26, 0, 20, 14, JOINT2, .8, 1.15); /* shoulder drum */
+  ringCyl(A_base, 'y', 0, 6, 0, 34, 12, JOINT2, .8, 1.15);  /* base plate on the table */
+  ringCyl(A_base, 'y', 0, 22, 0, 26, 24, STEEL, .72, 1.05); /* pedestal */
+  ringCyl(A_base, 'y', 0, 40, 0, 21, 16, JOINT2, .85, 1.2); /* shoulder drum */
   j1.add(toPoints(A_base));
 
-  var j2 = new THREE.Group(); j2.position.set(0, 36, 0); j1.add(j2); /* shoulder pitch */
+  var j2 = new THREE.Group(); j2.position.set(0, 50, 0); j1.add(j2); /* shoulder pitch */
   var A_upper = partArrays();
-  ringCyl(A_upper, 'z', 0, 0, 0, 18, 44, JOINT2, .8, 1.2);  /* shoulder knuckle */
-  ringCyl(A_upper, 'y', 0, 62, 0, 12.5, 116, STEEL, .75, 1.1); /* upper tube */
+  ringCyl(A_upper, 'z', 0, 0, 0, 19, 46, JOINT2, .85, 1.2);   /* shoulder knuckle */
+  ringCyl(A_upper, 'y', 0, 64, 0, 13, 120, STEEL, .78, 1.12); /* upper tube */
   j2.add(toPoints(A_upper));
 
-  var j3 = new THREE.Group(); j3.position.set(0, 122, 0); j2.add(j3); /* elbow */
+  var j3 = new THREE.Group(); j3.position.set(0, 126, 0); j2.add(j3); /* elbow */
   var A_fore = partArrays();
-  ringCyl(A_fore, 'z', 0, 0, 0, 15, 38, JOINT2, .8, 1.2);   /* elbow knuckle */
-  ringCyl(A_fore, 'y', 0, 54, 0, 9.5, 100, STEEL, .75, 1.1); /* forearm tube */
+  ringCyl(A_fore, 'z', 0, 0, 0, 16, 40, JOINT2, .85, 1.2);    /* elbow knuckle */
+  ringCyl(A_fore, 'y', 0, 56, 0, 10, 104, STEEL, .78, 1.12);  /* forearm tube */
   j3.add(toPoints(A_fore));
 
-  var j4 = new THREE.Group(); j4.position.set(0, 106, 0); j3.add(j4); /* wrist */
+  var j4 = new THREE.Group(); j4.position.set(0, 110, 0); j3.add(j4); /* wrist */
   var A_wrist = partArrays();
-  ringCyl(A_wrist, 'z', 0, 4, 0, 9, 24, JOINT2, .8, 1.2);   /* wrist knuckle */
-  ringCyl(A_wrist, 'y', 0, 16, 0, 8, 10, TEAL2, .9, 1.15);  /* teal collar */
-  ringCyl(A_wrist, 'y', 0, 25, 0, 7, 8, STEEL, .8, 1.15);   /* palm */
+  ringCyl(A_wrist, 'z', 0, 4, 0, 10, 26, JOINT2, .85, 1.2);   /* wrist knuckle */
+  ringCyl(A_wrist, 'y', 0, 18, 0, 8.5, 12, TEAL2, .95, 1.2);  /* teal collar */
+  ringCyl(A_wrist, 'y', 0, 28, 0, 7.5, 9, STEEL, .82, 1.15);  /* palm */
   j4.add(toPoints(A_wrist));
 
   /* parallel-jaw fingers: separate objects so the gripper can open/close */
   function finger() {
     var A = partArrays();
-    ringCyl(A, 'y', 0, 10, 0, 2.8, 20, STEEL, .8, 1.2);
+    ringCyl(A, 'y', 0, 11, 0, 3, 22, STEEL, .82, 1.2);
     var g3 = new THREE.Group();
-    g3.position.set(0, 28, 0);
+    g3.position.set(0, 30, 0);
     g3.add(toPoints(A));
     j4.add(g3);
     return g3;
   }
   var fingerL = finger(), fingerR = finger();
-  fingerL.position.x = -8.5; fingerR.position.x = 8.5;
+  fingerL.position.x = -9; fingerR.position.x = 9;
 
-  var arm = { j1: j1, j2: j2, j3: j3, j4: j4, fL: fingerL, fR: fingerR };
+  var arm = { j1: j1, j2: j2, j3: j3, j4: j4, fL: fingerL, fR: fingerR, scan: scanPlate };
 
   /* ---------- pointer → world point on the cloud plane ---------- */
   var pointerTarget = new THREE.Vector3(1e5, 1e5, -700);
@@ -349,6 +394,7 @@ export function start(container, opts) {
     var gap = 8.5 - 5 * grip * grip;
     arm.fL.position.x = -gap;
     arm.fR.position.x = gap;
+    arm.scan.rotation.y -= 0.014;                          /* scan sweep circles the platform */
 
     var introK = Math.min(1, (performance.now() - introStart) / 3000);
     if (introK < 1) introPlayed = true;

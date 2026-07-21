@@ -150,7 +150,7 @@ body {
   align-items: center; justify-content: center;
   gap: 2.2rem;
   pointer-events: none;
-  padding: 0 1.5rem;
+  padding: 0 1.5rem 40vh;   /* lift the copy so the robot centerpiece owns the lower frame */
   text-align: center;
 }
 .stage > * { pointer-events: auto; }
@@ -523,12 +523,12 @@ dialog::backdrop {
   .panel { padding: 3rem 1.4rem 1.8rem; width: 94vw; max-height: 90vh; }
   .notify { flex-direction: column; }
   .notify-btn { padding: .85rem 0; }
-  /* the arm shares the text band in portrait — deepen the pocket so the
-     sentence stays crisp over it without hiding the scene */
+  /* the robot sits low on phones; lift the copy into the upper frame */
+  .stage { padding-bottom: 34vh; }
   .scrim {
     background:
-      radial-gradient(ellipse 78% 30% at 50% 55%, rgba(0, 0, 0, .82), transparent 75%),
-      radial-gradient(ellipse 70% 50% at 50% 50%, rgba(0, 0, 0, .5), transparent 74%);
+      radial-gradient(ellipse 82% 34% at 50% 40%, rgba(0, 0, 0, .78), transparent 74%),
+      radial-gradient(ellipse 70% 50% at 50% 42%, rgba(0, 0, 0, .45), transparent 74%);
   }
 }
 
